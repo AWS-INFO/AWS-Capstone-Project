@@ -1,0 +1,150 @@
+AWS Academy Cloud Architecting 2.x - Capstone Project :
+
+Click on the start lab.
+
+wait till the the light near AWS to become green.
+
+click on AWS.
+
+
+Steps Used to Create project:
+
+1. Create a database in RDS
+DB Name : example
+User Name : admin
+Password : lab-password
+VPC- Example VPC
+security group - Example-DB
+
+*** Don't wait for the database become available instead of do the next steps.
+
+2. Check security group : ALBSG, Bastion-SG, Example-DB and Inventory-App 
+
+3. Create new keypair : vockey2 (ssh passthrough)
+	Go to key pairs
+		Name - vockey2
+
+4. Download the PPK file 
+	* Go to Capstone project page on AWS academy.
+	* On upper right side go to AWS details 
+	*  Click on "Download PPK"
+
+5. Create EC2-Instance Web Application. 
+	
+	* AMI - Amazon Linux 2 AMI
+	* Instance type- t2.Small
+	* VPC - Example VPC
+	* Subnet - Private Subnet 1
+	* Auto- assigne Public IP - Disable
+	* IAM role - Inventory-App-Role
+	* Name - ExampleApp
+	* CLick on "Select an existing securitygroup - after that select the "Inventory App" security group.
+	* Select an Existing Key - vockey2
+
+	IMP STEP - After creating the Instance go to Security Group - Inventory App and in the inbound rule 
+		* add the type - SSH 
+			* 	on the search box near the source - type -> "bastion-SG" - and select it 
+		* Click on Save rules.   
+
+
+6. Create Parameter Store in System Manager
+/example/endpoint - example.cbufnmin3yj3.us-east-1.rds.amazonaws.com
+/example/username - admin
+/example/password - lab-password
+/example/database - example
+
+7. Access the ExampleApp via bastion instance.
+	* Open the pagent (go to search box in your PC - search pagent - put the vockey2 key in the pagent - close the pagent )
+	* Open the putty 
+	* Click on connection , on the right side "Seconds between keepalives" - 30 
+	* Click on session , after that on the HOst name ENTER THE IPv4 ADDRESS of "Bastion" Instance. 
+	* Go to CONNECTION-SHH-AUTH - click on ALLOW AGENT FORWARDING. then click on "browse" and select the location of the PPK file you downloaded earlier.
+	* on the  pop-up click on Accept.
+	* login as - ec2-user 
+	(after the above command you will see like this-> ec2-use@ip-<private IPv4 address of Bastion instance>)
+	* On the command line type: ssh ec2-user@<private IPv4 address of ExampleApp instance you created earlier>
+	* after that type- yes
+	(after the above command you will now login as ExampleApp and on the command line you will see like this-> ec2-use@ip-<private IPv4 address of ExampleApp instance>)
+
+8. Install the  Apache Web Server (httpd) and Mysql on Instance ExampleApp, on the command line : 
+	ping www.google.com 
+	click ctrl + c 
+	sudo su
+	yum install -y httpd mysql
+	amazon-linux-extras install -y php7.2
+
+9. Download SQL , on the command line : 
+	wget https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/ILT-TF-200-ACACAD-20-EN/capstone-project/Countrydatadump.sql
+
+10. Download source code Web App, on the command line : 
+	wget https://aws-tc-largeobjects.s3-us-west-2.amazonaws.com/ILT-TF-200-ACACAD-20-EN/capstone-project/Example.zip
+
+11. extract source Web App and copy in directory /var/www/html, on the command line: 
+	unzip Example.zip -d /var/www/html/
+	ls /var/www/html/Example/
+
+12. enable and start service httpd, on the command line: 
+	systemctl enable httpd
+	systemctl start httpd
+	systemctl status httpd
+
+
+13. login to your database by using the following command line :
+	mysql -u admin -p --host example.cbufnmin3yj3.us-east-1.rds.amazonaws.com
+	Enter the password - lab-password
+	show databases;
+	exit;
+
+14. import data ke database :
+	mysql -u admin -p --host example.cbufnmin3yj3.us-east-1.rds.amazonaws.com example  < Countrydatadump.sql
+	Enter the password - lab-password
+	exit
+	exit
+
+15. Create Target Group
+	VPC- Example VPC
+	advanced health check setting-
+		Healthy threshold - 2
+		Interval - 10
+	
+	tags-
+		Add tag-
+			Name - TG-Example
+	click on creat target group
+
+16. Create Load Balancer
+	Select Application Load balancer
+	Name - LB-Example
+	VPC- Example VPC
+		select first region - us-east-1a
+			select subnet - public subnet 1
+		select second region - us-east-1b
+			select subnet - public subnet 2
+	security groups 
+		select - ALBSG 
+	liseners and rounting-
+		select - TG-Example
+	click on create load balancer
+
+17. Create Auto Scalling Group
+	Name- ASG-Example
+	on lunch template - 
+		select - Example-LT
+	Network -
+		VPC - Example VPC
+		subnets-
+			Select private subnet 1
+			Select private subnet 2
+	load balancing -
+		click on attach an exsting load balancer.
+		select - TG-Example
+18. Go to your Instances tab there are 2 more instances are launcing wait for 2 to 3 min. to pass the checks.
+
+19. Test the Web Application by using load balancer DNS in new tab.
+	Go to Load balancer you created earlier.
+	copy the DNS address of the load balancer and paste it in a new tab.
+
+THANK YOU...
+
+
+
